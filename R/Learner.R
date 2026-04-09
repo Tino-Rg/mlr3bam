@@ -80,3 +80,67 @@ LearnerClassifBam <- R6::R6Class(
     }
   )
 )
+
+#' @title Regression BAM Learner
+#' @name mlr_learners_regr.bam
+#' @importFrom R6 R6Class
+#' @importFrom mlr3 LearnerRegr
+#' @export
+LearnerRegrBam <- R6::R6Class(
+  "LearnerRegrBam",
+  inherit = mlr3::LearnerRegr,
+
+  public = list(
+    #' @description
+    #' Creates a new instance of this R6 class.
+    initialize = function() {
+      super$initialize(
+        id = "regr.bam",
+        # Declare required packages for the learner to operate
+        packages = c("mlr3learners", "mgcv"),
+        feature_types = c("logical", "integer", "numeric", "factor"),
+        predict_types = c("response"),
+
+        # Define the hyperparameter space (based on mgcv::bam)
+        param_set = paradox::ps(
+          discrete = paradox::p_lgl(default = TRUE, tags = "train"),
+          family = paradox::p_fct(
+            levels = c("gaussian", "poisson"),
+            default = "gaussian",
+            tags = "train"
+          )
+        ),
+
+        # Learner capabilities (none specific needed for standard regression)
+        properties = character(0)
+      )
+    }
+  ),
+
+  private = list(
+    .train = function(task) {
+      # Extract training hyperparameters
+      pars = self$param_set$get_values(tags = "train")
+
+      # Extract data and formula from the mlr3 task
+      data = task$data()
+      formula = task$formula()
+
+      # Safely invoke the fitting algorithm
+      mlr3misc::invoke(mgcv::bam, formula = formula, data = data, .args = pars)
+    },
+
+    .predict = function(task) {
+      # Extract feature data for prediction
+      newdata = task$data(cols = task$feature_names)
+
+      # Get raw numerical predictions from the trained model
+      response = mlr3misc::invoke(
+        predict, self$model, newdata = newdata, type = "response"
+      )
+
+      # Return the formatted response for mlr3
+      list(response = unname(response))
+    }
+  )
+)
