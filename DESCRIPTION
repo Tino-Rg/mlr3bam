@@ -1,0 +1,14 @@
+Package: mlr3bam
+Title: Fast Generalized Additive Models (BAM) Learner for mlr3
+Version: 0.1.0
+Authors@R: person("Tino", "Roger", email = "tino.roger35@gmail.com", role = c("aut", "cre"))
+Description: Provides a learner for fast generalized additive models using the bam function from the mgcv package.
+License: GPL-3
+Encoding: UTF-8
+Imports: 
+    mgcv,
+    mlr3,
+    mlr3learners,
+    R6
+Suggests: 
+    testthat
