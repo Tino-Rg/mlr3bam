@@ -12,3 +12,5 @@ Imports:
     R6
 Suggests: 
     testthat
+RoxygenNote: 7.3.3
+
