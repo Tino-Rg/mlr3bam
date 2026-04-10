@@ -9,6 +9,18 @@ Classification BAM Learner
 
 Classification BAM Learner
 }
+\examples{
+if (requireNamespace("mgcv", quietly = TRUE)) {
+  task = mlr3::tsk("sonar")
+
+  learner = LearnerClassifBam$new()
+
+  learner$train(task)
+
+  pred = learner$predict(task)
+  print(pred)
+}
+}
 \section{Super classes}{
 \code{\link[mlr3:Learner]{mlr3::Learner}} -> \code{\link[mlr3:LearnerClassif]{mlr3::LearnerClassif}} -> \code{LearnerClassifBam}
 }

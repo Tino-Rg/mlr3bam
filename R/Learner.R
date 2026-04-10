@@ -3,6 +3,17 @@
 #' @importFrom R6 R6Class
 #' @importFrom mlr3 LearnerClassif
 #' @export
+#' @examples
+#' if (requireNamespace("mgcv", quietly = TRUE)) {
+#'   task = mlr3::tsk("sonar")
+#'
+#'   learner = LearnerClassifBam$new()
+#'
+#'   learner$train(task)
+#'
+#'   pred = learner$predict(task)
+#'   print(pred)
+#' }
 LearnerClassifBam <- R6::R6Class(
   "LearnerClassifBam",
   inherit = mlr3::LearnerClassif,
@@ -86,6 +97,17 @@ LearnerClassifBam <- R6::R6Class(
 #' @importFrom R6 R6Class
 #' @importFrom mlr3 LearnerRegr
 #' @export
+#' @examples
+#' if (requireNamespace("mgcv", quietly = TRUE)) {
+#'   task = mlr3::tsk("mtcars")
+#'
+#'   learner = LearnerRegrBam$new()
+#'
+#'   learner$train(task)
+#'
+#'   pred = learner$predict(task)
+#'   print(pred)
+#' }
 LearnerRegrBam <- R6::R6Class(
   "LearnerRegrBam",
   inherit = mlr3::LearnerRegr,
