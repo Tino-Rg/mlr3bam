@@ -33,50 +33,52 @@ LearnerClassifBam <- R6::R6Class(
         param_set = paradox::ps(
           discrete = paradox::p_lgl(default = TRUE, tags = "train"),
           family = paradox::p_fct(
-            levels = c("binomial", "multinom"),
+            levels = c("binomial"),
             default = "binomial",
             tags = "train"
           )
         ),
 
-        # Declare learner capabilities
-        properties = c("twoclass", "multiclass")
+        # Declare learner capabilities (restricted to binary classification)
+        properties = c("twoclass")
       )
     }
   ),
 
   private = list(
     .train = function(task) {
-      # Extract training hyperparameters
       pars = self$param_set$get_values(tags = "train")
 
-      # Force multinomial family for multiclass tasks
-      if (length(task$class_names) > 2L) {
-        pars$family = "multinom"
-      }
+      # Force data to a standard data.frame for mgcv compatibility
+      data = as.data.frame(task$data())
 
-      # Extract data and formula from the mlr3 task
-      data = task$data()
-      formula = task$formula()
+      # Convert binary target factor to a 0/1 numeric vector
+      # as required by bam()
+      data[[task$target_names]] = as.numeric(
+        data[[task$target_names]] == task$class_names[2]
+      )
 
-      # Invoke the fitting algorithm
-      mlr3misc::invoke(mgcv::bam, formula = formula, data = data, .args = pars)
+      # Construct explicit formula to avoid environment scoping issues with '.'
+      features = paste(task$feature_names, collapse = " + ")
+      target = task$target_names
+      form = as.formula(paste(target, "~", features))
+
+      mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
     },
 
     .predict = function(task) {
-      # Extract feature data for prediction
-      newdata = task$data(cols = task$feature_names)
+      # Extract feature data and force standard data.frame format
+      newdata = as.data.frame(task$data(cols = task$feature_names))
 
-      # Get raw predictions from the trained model
       model_pred = mlr3misc::invoke(
         predict, self$model, newdata = newdata, type = "response"
       )
 
-      # Convert binary prediction vector to a proper probability matrix for mlr3
-      if (is.null(dim(model_pred))) {
-        model_pred = matrix(c(1 - model_pred, model_pred), ncol = 2)
-        colnames(model_pred) = task$class_names
-      }
+      # Ensure predictions are numeric
+      # and construct the two-column probability matrix
+      model_pred = as.numeric(model_pred)
+      model_pred = matrix(c(1 - model_pred, model_pred), ncol = 2)
+      colnames(model_pred) = task$class_names
 
       # Format the output based on the requested prediction type
       if (self$predict_type == "response") {
@@ -133,7 +135,6 @@ LearnerRegrBam <- R6::R6Class(
           )
         ),
 
-        # Learner capabilities (none specific needed for standard regression)
         properties = character(0)
       )
     }
@@ -141,22 +142,24 @@ LearnerRegrBam <- R6::R6Class(
 
   private = list(
     .train = function(task) {
-      # Extract training hyperparameters
       pars = self$param_set$get_values(tags = "train")
 
-      # Extract data and formula from the mlr3 task
-      data = task$data()
-      formula = task$formula()
+      # Force data to a standard data.frame for mgcv compatibility
+      data = as.data.frame(task$data())
+
+      # Construct explicit formula to avoid environment scoping issues with '.'
+      features = paste(task$feature_names, collapse = " + ")
+      target = task$target_names
+      form = as.formula(paste(target, "~", features))
 
       # Safely invoke the fitting algorithm
-      mlr3misc::invoke(mgcv::bam, formula = formula, data = data, .args = pars)
+      mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
     },
 
     .predict = function(task) {
-      # Extract feature data for prediction
-      newdata = task$data(cols = task$feature_names)
+      # Extract feature data and force standard data.frame format
+      newdata = as.data.frame(task$data(cols = task$feature_names))
 
-      # Get raw numerical predictions from the trained model
       response = mlr3misc::invoke(
         predict, self$model, newdata = newdata, type = "response"
       )
