@@ -15,8 +15,13 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
 
   learner = LearnerClassifBam$new()
 
-  learner$train(task)
+  learner$param_set$set_values(
+    formula = "Class ~ s(V1, k=5) + V2",
+    discrete = TRUE,
+    nthreads = 1
+  )
 
+  learner$train(task)
   pred = learner$predict(task)
   print(pred)
 }

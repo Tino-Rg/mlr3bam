@@ -13,7 +13,12 @@ library(mlr3bam)
 ### Classification
 
 task = mlr3::tsk("sonar")  
-learner = LearnerClassifBam$new()  
+learner = LearnerClassifBam$new()
+learner$param_set$set_values(
+    formula = "Class ~ s(V1, k=5) + V2",
+    discrete = TRUE,
+    nthreads = 1
+)  
 learner$train(task)  
 pred = learner$predict(task)  
 print(pred)
@@ -21,7 +26,11 @@ print(pred)
 ### Regression
 
 task = mlr3::tsk("mtcars")  
-learner = LearnerRegrBam$new()   
+learner = LearnerRegrBam$new() 
+learner$param_set$set_values(
+    formula = "mpg ~ s(hp, k=3) + cyl",
+    method = "fREML"
+)  
 learner$train(task)   
 pred = learner$predict(task)    
 print(pred)
