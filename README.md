@@ -7,7 +7,7 @@ remotes::install_github("Tino-Rg/mlr3bam")
 
 ## Usage
 
-library(mlr3)
+library(mlr3)  
 library(mlr3bam)
 
 ### Classification
