@@ -8,9 +8,11 @@ Encoding: UTF-8
 Imports: 
     mgcv,
     mlr3,
-    mlr3learners,
+    mlr3misc,
+    paradox,
     R6
 Suggests: 
     testthat (>= 3.0.0)
+    mlr3learners
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3

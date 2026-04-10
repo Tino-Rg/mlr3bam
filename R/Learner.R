@@ -9,8 +9,13 @@
 #'
 #'   learner = LearnerClassifBam$new()
 #'
-#'   learner$train(task)
+#'   learner$param_set$set_values(
+#'     formula = "Class ~ s(V1, k=5) + V2",
+#'     discrete = TRUE,
+#'     nthreads = 1
+#'   )
 #'
+#'   learner$train(task)
 #'   pred = learner$predict(task)
 #'   print(pred)
 #' }
@@ -22,25 +27,30 @@ LearnerClassifBam <- R6::R6Class(
     #' @description
     #' Creates a new instance of this R6 class.
     initialize = function() {
+      ps = paradox::ps(
+        discrete = paradox::p_lgl(default = TRUE, tags = "train"),
+        family = paradox::p_fct(
+          levels = c("binomial"), default = "binomial",
+          tags = "train"
+        ),
+        method = paradox::p_fct(
+          levels = c("fREML", "REML", "GCV.Cp"), default = "fREML",
+          tags = "train"
+        ),
+        formula = paradox::p_uty(default = NULL, tags = "train"),
+        nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train"),
+        select = paradox::p_lgl(default = FALSE, tags = "train")
+      )
+
       super$initialize(
         id = "classif.bam",
-        # Declare required packages for the learner to operate
-        packages = c("mlr3learners", "mgcv"), 
+        packages = c("mgcv"),
         feature_types = c("logical", "integer", "numeric", "factor"),
         predict_types = c("response", "prob"),
-
-        # Define the hyperparameter space (based on mgcv::bam)
-        param_set = paradox::ps(
-          discrete = paradox::p_lgl(default = TRUE, tags = "train"),
-          family = paradox::p_fct(
-            levels = c("binomial"),
-            default = "binomial",
-            tags = "train"
-          )
-        ),
-
-        # Declare learner capabilities (restricted to binary classification)
-        properties = c("twoclass")
+        param_set = ps,
+        properties = c("twoclass"),
+        label = "Fast Generalized Additive Model (BAM)",
+        man = "mlr3bam::mlr_learners_classif.bam"
       )
     }
   ),
@@ -58,10 +68,13 @@ LearnerClassifBam <- R6::R6Class(
         data[[task$target_names]] == task$class_names[2]
       )
 
-      # Construct explicit formula to avoid environment scoping issues with '.'
-      features = paste(task$feature_names, collapse = " + ")
-      target = task$target_names
-      form = as.formula(paste(target, "~", features))
+      if (is.null(pars$formula)) {
+        features = paste(task$feature_names, collapse = " + ")
+        form = as.formula(paste(task$target_names, "~", features))
+      } else {
+        form = as.formula(pars$formula)
+      }
+      pars$formula = NULL
 
       mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
     },
@@ -105,6 +118,11 @@ LearnerClassifBam <- R6::R6Class(
 #'
 #'   learner = LearnerRegrBam$new()
 #'
+#'   learner$param_set$set_values(
+#'     formula = "mpg ~ s(hp, k=3) + cyl",
+#'     method = "fREML"
+#'   )
+#'
 #'   learner$train(task)
 #'
 #'   pred = learner$predict(task)
@@ -118,24 +136,27 @@ LearnerRegrBam <- R6::R6Class(
     #' @description
     #' Creates a new instance of this R6 class.
     initialize = function() {
+      ps = paradox::ps(
+        discrete = paradox::p_lgl(default = TRUE, tags = "train"),
+        family = paradox::p_fct(
+          levels = c("gaussian", "poisson"), default = "gaussian",
+          tags = "train"
+        ),
+        method = paradox::p_fct(
+          levels = c("fREML", "REML"), default = "fREML",
+          tags = "train"
+        ),
+        formula = paradox::p_uty(default = NULL, tags = "train"),
+        nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train")
+      )
+
       super$initialize(
         id = "regr.bam",
-        # Declare required packages for the learner to operate
-        packages = c("mlr3learners", "mgcv"),
+        packages = c("mgcv"),
         feature_types = c("logical", "integer", "numeric", "factor"),
         predict_types = c("response"),
-
-        # Define the hyperparameter space (based on mgcv::bam)
-        param_set = paradox::ps(
-          discrete = paradox::p_lgl(default = TRUE, tags = "train"),
-          family = paradox::p_fct(
-            levels = c("gaussian", "poisson"),
-            default = "gaussian",
-            tags = "train"
-          )
-        ),
-
-        properties = character(0)
+        param_set = ps,
+        label = "Fast Generalized Additive Model (BAM) Regression"
       )
     }
   ),
@@ -147,10 +168,13 @@ LearnerRegrBam <- R6::R6Class(
       # Force data to a standard data.frame for mgcv compatibility
       data = as.data.frame(task$data())
 
-      # Construct explicit formula to avoid environment scoping issues with '.'
-      features = paste(task$feature_names, collapse = " + ")
-      target = task$target_names
-      form = as.formula(paste(target, "~", features))
+      if (is.null(pars$formula)) {
+        features = paste(task$feature_names, collapse = " + ")
+        form = as.formula(paste(task$target_names, "~", features))
+      } else {
+        form = as.formula(pars$formula)
+      }
+      pars$formula = NULL
 
       # Safely invoke the fitting algorithm
       mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)

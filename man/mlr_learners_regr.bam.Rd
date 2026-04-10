@@ -15,6 +15,11 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
 
   learner = LearnerRegrBam$new()
 
+  learner$param_set$set_values(
+    formula = "mpg ~ s(hp, k=3) + cyl",
+    method = "fREML"
+  )
+
   learner$train(task)
 
   pred = learner$predict(task)
