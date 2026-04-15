@@ -3,7 +3,9 @@ R package implementing Big Additive Model (BAM) learners for the mlr3 ecosystem.
 
 ## Installation
 
+```r
 remotes::install_github("Tino-Rg/mlr3bam")
+```
 
 ## Usage
 
