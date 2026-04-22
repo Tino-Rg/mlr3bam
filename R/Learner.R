@@ -10,7 +10,7 @@
 #'   learner = LearnerClassifBam$new()
 #'
 #'   learner$param_set$set_values(
-#'     formula = "Class ~ s(V1, k=5) + V2",
+#'     k = 5,
 #'     discrete = TRUE,
 #'     nthreads = 1
 #'   )
@@ -33,7 +33,7 @@ LearnerClassifBam <- R6::R6Class(
           levels = c("fREML", "REML", "GCV.Cp"), default = "fREML",
           tags = "train"
         ),
-        formula = paradox::p_uty(default = NULL, tags = "train"),
+        k = paradox::p_int(lower = -1L, default = -1L, tags = "train"),
         nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train"),
         select = paradox::p_lgl(default = FALSE, tags = "train")
       )
@@ -64,13 +64,38 @@ LearnerClassifBam <- R6::R6Class(
         data[[task$target_names]] == task$class_names[2]
       )
 
-      if (is.null(pars$formula)) {
-        features = paste(task$feature_names, collapse = " + ")
-        form = as.formula(paste(task$target_names, "~", features))
+      # Extract spline dimension parameter 'k'.
+      # It is removed from 'pars' as it is injected directly into the formula
+      k_val = pars$k
+      if (is.null(k_val)) k_val = -1
+      pars$k = NULL
+
+      # Dynamic formula construction:
+      # In generalized additive models, continuous features are smoothed
+      # using s() splines, while discrete/categorical features are included
+      # as linear parametric terms.
+      feat_types = task$feature_types
+      num_feats = feat_types$id[feat_types$type %in% c("numeric", "integer")]
+      fct_feats = feat_types$id[feat_types$type %in% c("factor", "logical")]
+
+      if (length(num_feats) > 0) {
+        num_terms = sprintf("s(%s, k=%d)", num_feats, k_val)
       } else {
-        form = as.formula(pars$formula)
+        num_terms = character(0)
       }
-      pars$formula = NULL
+
+      all_terms = c(num_terms, fct_feats)
+
+      if (length(all_terms) == 0) {
+        # Fallback for featureless tasks (intercept only)
+        form_string = paste(task$target_names, "~ 1")
+      } else {
+        form_string = paste(
+          task$target_names, "~", paste(all_terms, collapse = " + ")
+        )
+      }
+
+      form = as.formula(form_string)
 
       mlr3misc::invoke(
         mgcv::bam,
@@ -121,7 +146,7 @@ LearnerClassifBam <- R6::R6Class(
 #'   learner = LearnerRegrBam$new()
 #'
 #'   learner$param_set$set_values(
-#'     formula = "mpg ~ s(hp, k=3) + cyl",
+#'     k = 3,
 #'     method = "fREML"
 #'   )
 #'
@@ -148,7 +173,7 @@ LearnerRegrBam <- R6::R6Class(
           levels = c("fREML", "REML"), default = "fREML",
           tags = "train"
         ),
-        formula = paradox::p_uty(default = NULL, tags = "train"),
+        k = paradox::p_int(lower = -1L, default = -1L, tags = "train"),
         nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train")
       )
 
@@ -170,15 +195,39 @@ LearnerRegrBam <- R6::R6Class(
       # Force data to a standard data.frame for mgcv compatibility
       data = as.data.frame(task$data())
 
-      if (is.null(pars$formula)) {
-        features = paste(task$feature_names, collapse = " + ")
-        form = as.formula(paste(task$target_names, "~", features))
-      } else {
-        form = as.formula(pars$formula)
-      }
-      pars$formula = NULL
+      # Extract spline dimension parameter 'k'.
+      # It is removed from 'pars' as it is injected directly into the formula
+      k_val = pars$k
+      if (is.null(k_val)) k_val = -1
+      pars$k = NULL
 
-      # Safely invoke the fitting algorithm
+      # Dynamic formula construction:
+      # In generalized additive models, continuous features are smoothed
+      # using s() splines, while discrete/categorical features are included
+      # as linear parametric terms.
+      feat_types = task$feature_types
+      num_feats = feat_types$id[feat_types$type %in% c("numeric", "integer")]
+      fct_feats = feat_types$id[feat_types$type %in% c("factor", "logical")]
+
+      if (length(num_feats) > 0) {
+        num_terms = sprintf("s(%s, k=%d)", num_feats, k_val)
+      } else {
+        num_terms = character(0)
+      }
+
+      all_terms = c(num_terms, fct_feats)
+
+      if (length(all_terms) == 0) {
+        # Fallback for featureless tasks (intercept only)
+        form_string = paste(task$target_names, "~ 1")
+      } else {
+        form_string = paste(
+          task$target_names, "~", paste(all_terms, collapse = " + ")
+        )
+      }
+
+      form = as.formula(form_string)
+
       mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
     },
 
