@@ -3,37 +3,45 @@ R package implementing Big Additive Model (BAM) learners for the mlr3 ecosystem.
 
 ## Installation
 
+```r
 remotes::install_github("Tino-Rg/mlr3bam")
+```
 
 ## Usage
 
+```r
 library(mlr3)  
 library(mlr3bam)
+```
 
 ### Classification
 
+```r
 task = mlr3::tsk("sonar")  
 learner = LearnerClassifBam$new()
 learner$param_set$set_values(
-    formula = "Class ~ s(V1, k=5) + V2",
+    k = 5,
     discrete = TRUE,
     nthreads = 1
 )  
 learner$train(task)  
 pred = learner$predict(task)  
 print(pred)
+```
 
 ### Regression
 
+```r
 task = mlr3::tsk("mtcars")  
 learner = LearnerRegrBam$new() 
 learner$param_set$set_values(
-    formula = "mpg ~ s(hp, k=3) + cyl",
+    k = 3,
     method = "fREML"
 )  
 learner$train(task)   
 pred = learner$predict(task)    
 print(pred)
+```
 
 ## Related work
 

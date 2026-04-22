@@ -16,7 +16,7 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
   learner = LearnerClassifBam$new()
 
   learner$param_set$set_values(
-    formula = "Class ~ s(V1, k=5) + V2",
+    k = 5,
     discrete = TRUE,
     nthreads = 1
   )

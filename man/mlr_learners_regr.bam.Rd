@@ -16,7 +16,7 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
   learner = LearnerRegrBam$new()
 
   learner$param_set$set_values(
-    formula = "mpg ~ s(hp, k=3) + cyl",
+    k = 3,
     method = "fREML"
   )
 
