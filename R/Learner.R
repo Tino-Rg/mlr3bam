@@ -143,6 +143,9 @@ LearnerClassifBam <- R6::R6Class(
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("mtcars")
 #'
+#'   # Only select continuous features to avoid mgcv error with k=3.
+#'   task$select(c("disp", "hp", "drat", "wt", "qsec"))
+#'
 #'   learner = LearnerRegrBam$new()
 #'
 #'   learner$param_set$set_values(
