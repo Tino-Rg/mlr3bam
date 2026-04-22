@@ -29,10 +29,6 @@ LearnerClassifBam <- R6::R6Class(
     initialize = function() {
       ps = paradox::ps(
         discrete = paradox::p_lgl(default = TRUE, tags = "train"),
-        family = paradox::p_fct(
-          levels = c("binomial"), default = "binomial",
-          tags = "train"
-        ),
         method = paradox::p_fct(
           levels = c("fREML", "REML", "GCV.Cp"), default = "fREML",
           tags = "train"
@@ -76,7 +72,13 @@ LearnerClassifBam <- R6::R6Class(
       }
       pars$formula = NULL
 
-      mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
+      mlr3misc::invoke(
+        mgcv::bam,
+        formula = form,
+        data = data,
+        family = "binomial",
+        .args = pars
+      )
     },
 
     .predict = function(task) {
