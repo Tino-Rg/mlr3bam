@@ -2,6 +2,3 @@
 
 export(LearnerClassifBam)
 export(LearnerRegrBam)
-importFrom(R6,R6Class)
-importFrom(mlr3,LearnerClassif)
-importFrom(mlr3,LearnerRegr)

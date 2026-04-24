@@ -20,10 +20,9 @@ library(mlr3bam)
 task = mlr3::tsk("sonar")  
 learner = LearnerClassifBam$new()
 learner$param_set$set_values(
-    k = 5,
-    discrete = TRUE,
-    nthreads = 1
-)  
+    formula = Class ~ s(V1, k = 5) + s(V2, k = 4) + V3,
+    method = "fREML"
+) 
 learner$train(task)  
 pred = learner$predict(task)  
 print(pred)
@@ -33,13 +32,11 @@ print(pred)
 
 ```r
 task = mlr3::tsk("mtcars")
-# Only select continuous features to avoid mgcv error with k=3.
-task$select(c("disp", "hp", "drat", "wt", "qsec"))  
 learner = LearnerRegrBam$new() 
 learner$param_set$set_values(
-    k = 3,
+    formula = mpg ~ s(disp, k = 3) + s(hp, k = 4) + cyl,
     method = "fREML"
-)  
+)
 learner$train(task)   
 pred = learner$predict(task)    
 print(pred)

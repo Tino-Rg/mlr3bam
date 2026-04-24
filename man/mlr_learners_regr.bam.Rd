@@ -3,31 +3,43 @@
 \name{mlr_learners_regr.bam}
 \alias{mlr_learners_regr.bam}
 \alias{LearnerRegrBam}
-\title{Regression BAM Learner}
+\title{Regression Fast Generalized Additive Model Learner}
 \description{
-Regression BAM Learner
-
-Regression BAM Learner
+Fast generalized additive models for large datasets (BAM).
+Calls `mgcv::bam()` from package \CRANpkg{mgcv}.
 }
+\section{Formula}{
+
+A gam formula specific to the task at hand is required for the `formula`
+parameter (see example and `?mgcv::formula.gam`). Beware, if no formula is provided, a fallback formula is
+used that will make the model behave like a glm (this behavior is required
+for the unit tests). Only features specified in the formula will be used,
+superseding columns with col_roles "feature" in the task.
+}
+
 \examples{
 if (requireNamespace("mgcv", quietly = TRUE)) {
   task = mlr3::tsk("mtcars")
 
-  # Only select continuous features to avoid mgcv error with k=3.
-  task$select(c("disp", "hp", "drat", "wt", "qsec"))
-
-  learner = LearnerRegrBam$new()
+  learner = lrn("regr.bam")
 
   learner$param_set$set_values(
-    k = 3,
+    formula = mpg ~ s(disp, k = 3) + s(hp, k = 4) + cyl,
     method = "fREML"
   )
 
   learner$train(task)
+  print(learner$model)
 
   pred = learner$predict(task)
   print(pred)
 }
+}
+\references{
+`r format_bib("hastie2017generalized", "wood2012mgcv")`
+}
+\author{
+Tino-Rg
 }
 \section{Super classes}{
 \code{\link[mlr3:Learner]{mlr3::Learner}} -> \code{\link[mlr3:LearnerRegr]{mlr3::LearnerRegr}} -> \code{LearnerRegrBam}
@@ -61,7 +73,7 @@ if (requireNamespace("mgcv", quietly = TRUE)) {
 \if{html}{\out{<a id="method-LearnerRegrBam-new"></a>}}
 \if{latex}{\out{\hypertarget{method-LearnerRegrBam-new}{}}}
 \subsection{Method \code{new()}}{
-Creates a new instance of this R6 class.
+Creates a new instance of this [R6][R6::R6Class] class.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{LearnerRegrBam$new()}\if{html}{\out{</div>}}
 }
