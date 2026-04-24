@@ -2,3 +2,9 @@
 
 export(LearnerClassifBam)
 export(LearnerRegrBam)
+import(R6)
+import(mgcv)
+import(mlr3)
+import(mlr3extralearners)
+import(paradox)
+importFrom(mlr3misc,invoke)
