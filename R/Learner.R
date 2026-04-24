@@ -18,6 +18,14 @@
 #' `r format_bib("hastie2017generalized", "wood2012mgcv")`
 #'
 #' @export
+#'
+#' @import R6
+#' @import mlr3
+#' @import mgcv
+#' @import paradox
+#' @import mlr3extralearners
+#' @importFrom mlr3misc invoke
+#'
 #' @examples
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("sonar")
@@ -134,6 +142,14 @@ LearnerClassifBam <- R6::R6Class(
 #' `r format_bib("hastie2017generalized", "wood2012mgcv")`
 #'
 #' @export
+#'
+#' @import R6
+#' @import mlr3
+#' @import mgcv
+#' @import paradox
+#' @import mlr3extralearners
+#' @importFrom mlr3misc invoke
+#'
 #' @examples
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("mtcars")
