@@ -1,21 +1,37 @@
-#' @title Classification BAM Learner
+#' @title Classification Fast Generalized Additive Model Learner
+#' @author Tino-Rg
 #' @name mlr_learners_classif.bam
-#' @importFrom R6 R6Class
-#' @importFrom mlr3 LearnerClassif
+#'
+#' @description
+#' Fast generalized additive models for large datasets (BAM).
+#' Calls `mgcv::bam()` from package \CRANpkg{mgcv} with `family` set to `binomial`.
+#'
+#' @section Formula:
+#' A gam formula specific to the task at hand is required for the `formula`
+#' parameter (see example and `?mgcv::formula.gam`). Beware, if no formula is provided, a fallback formula is
+#' used that will make the model behave like a glm (this behavior is required
+#' for the unit tests). Only features specified in the formula will be used,
+#' superseding columns with col_roles "feature" in the task.
+#'
+#'
+#' @references
+#' `r format_bib("hastie2017generalized", "wood2012mgcv")`
+#'
 #' @export
 #' @examples
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("sonar")
 #'
-#'   learner = LearnerClassifBam$new()
+#'   learner = lrn("classif.bam")
 #'
 #'   learner$param_set$set_values(
-#'     k = 5,
-#'     discrete = TRUE,
-#'     nthreads = 1
+#'     formula = Class ~ s(V1, k = 5) + s(V2, k = 4) + V3,
+#'     method = "fREML"
 #'   )
 #'
 #'   learner$train(task)
+#'   print(learner$model)
+#'
 #'   pred = learner$predict(task)
 #'   print(pred)
 #' }
@@ -25,15 +41,15 @@ LearnerClassifBam <- R6::R6Class(
 
   public = list(
     #' @description
-    #' Creates a new instance of this R6 class.
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = paradox::ps(
+        formula = paradox::p_uty(tags = "train"),
         discrete = paradox::p_lgl(default = TRUE, tags = "train"),
         method = paradox::p_fct(
           levels = c("fREML", "REML", "GCV.Cp"), default = "fREML",
           tags = "train"
         ),
-        k = paradox::p_int(lower = -1L, default = -1L, tags = "train"),
         nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train"),
         select = paradox::p_lgl(default = FALSE, tags = "train")
       )
@@ -55,105 +71,82 @@ LearnerClassifBam <- R6::R6Class(
     .train = function(task) {
       pars = self$param_set$get_values(tags = "train")
 
-      # Force data to a standard data.frame for mgcv compatibility
-      data = as.data.frame(task$data())
+      data = task$data(cols = c(task$feature_names, task$target_names))
 
-      # Convert binary target factor to a 0/1 numeric vector
-      # as required by bam()
-      data[[task$target_names]] = as.numeric(
-        data[[task$target_names]] == task$class_names[2]
-      )
+      # On force la famille binomiale pour la classification
+      pars$family = "binomial"
 
-      # Extract spline dimension parameter 'k'.
-      # It is removed from 'pars' as it is injected directly into the formula
-      k_val = pars$k
-      if (is.null(k_val)) k_val = -1
-      pars$k = NULL
-
-      # Dynamic formula construction:
-      # In generalized additive models, continuous features are smoothed
-      # using s() splines, while discrete/categorical features are included
-      # as linear parametric terms.
-      feat_types = task$feature_types
-      num_feats = feat_types$id[feat_types$type %in% c("numeric", "integer")]
-      fct_feats = feat_types$id[feat_types$type %in% c("factor", "logical")]
-
-      if (length(num_feats) > 0) {
-        num_terms = sprintf("s(%s, k=%d)", num_feats, k_val)
-      } else {
-        num_terms = character(0)
-      }
-
-      all_terms = c(num_terms, fct_feats)
-
-      if (length(all_terms) == 0) {
-        # Fallback for featureless tasks (intercept only)
-        form_string = paste(task$target_names, "~ 1")
-      } else {
-        form_string = paste(
-          task$target_names, "~", paste(all_terms, collapse = " + ")
+      # Fallback vers un modèle linéaire classique si pas de formule
+      if (is.null(pars$formula)) {
+        formula_str = paste(
+          task$target_names,
+          "~",
+          paste(task$feature_names, collapse = " + ")
         )
+        pars$formula = as.formula(formula_str)
       }
 
-      form = as.formula(form_string)
-
-      mlr3misc::invoke(
-        mgcv::bam,
-        formula = form,
-        data = data,
-        family = "binomial",
-        .args = pars
-      )
+      mlr3misc::invoke(mgcv::bam, data = data, .args = pars)
     },
 
     .predict = function(task) {
-      # Extract feature data and force standard data.frame format
-      newdata = as.data.frame(task$data(cols = task$feature_names))
+      newdata = mlr3extralearners:::ordered_features(task, self)
 
       model_pred = mlr3misc::invoke(
         predict, self$model, newdata = newdata, type = "response"
       )
 
-      # Ensure predictions are numeric
-      # and construct the two-column probability matrix
       model_pred = as.numeric(model_pred)
       model_pred = matrix(c(1 - model_pred, model_pred), ncol = 2)
       colnames(model_pred) = task$class_names
 
-      # Format the output based on the requested prediction type
       if (self$predict_type == "response") {
-        # Extract the class with the highest probability
         class_indices = max.col(model_pred, ties.method = "random")
         response = colnames(model_pred)[class_indices]
         list(response = unname(response))
       } else {
-        # Return the probability matrix directly
         list(prob = model_pred)
       }
     }
   )
 )
 
-#' @title Regression BAM Learner
+#.extralrns_dict$add("classif.bam", LearnerClassifBam)
+
+
+
+#' @title Regression Fast Generalized Additive Model Learner
+#' @author Tino-Rg
 #' @name mlr_learners_regr.bam
-#' @importFrom R6 R6Class
-#' @importFrom mlr3 LearnerRegr
+#'
+#' @description
+#' Fast generalized additive models for large datasets (BAM).
+#' Calls `mgcv::bam()` from package \CRANpkg{mgcv}.
+#'
+#' @section Formula:
+#' A gam formula specific to the task at hand is required for the `formula`
+#' parameter (see example and `?mgcv::formula.gam`). Beware, if no formula is provided, a fallback formula is
+#' used that will make the model behave like a glm (this behavior is required
+#' for the unit tests). Only features specified in the formula will be used,
+#' superseding columns with col_roles "feature" in the task.
+#'
+#' @references
+#' `r format_bib("hastie2017generalized", "wood2012mgcv")`
+#'
 #' @export
 #' @examples
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("mtcars")
 #'
-#'   # Only select continuous features to avoid mgcv error with k=3.
-#'   task$select(c("disp", "hp", "drat", "wt", "qsec"))
-#'
-#'   learner = LearnerRegrBam$new()
+#'   learner = lrn("regr.bam")
 #'
 #'   learner$param_set$set_values(
-#'     k = 3,
+#'     formula = mpg ~ s(disp, k = 3) + s(hp, k = 4) + cyl,
 #'     method = "fREML"
 #'   )
 #'
 #'   learner$train(task)
+#'   print(learner$model)
 #'
 #'   pred = learner$predict(task)
 #'   print(pred)
@@ -164,9 +157,10 @@ LearnerRegrBam <- R6::R6Class(
 
   public = list(
     #' @description
-    #' Creates a new instance of this R6 class.
+    #' Creates a new instance of this [R6][R6::R6Class] class.
     initialize = function() {
       ps = paradox::ps(
+        formula = paradox::p_uty(tags = "train"),
         discrete = paradox::p_lgl(default = TRUE, tags = "train"),
         family = paradox::p_fct(
           levels = c("gaussian", "poisson"), default = "gaussian",
@@ -176,7 +170,6 @@ LearnerRegrBam <- R6::R6Class(
           levels = c("fREML", "REML"), default = "fREML",
           tags = "train"
         ),
-        k = paradox::p_int(lower = -1L, default = -1L, tags = "train"),
         nthreads = paradox::p_int(lower = 1L, default = 1L, tags = "train")
       )
 
@@ -186,7 +179,8 @@ LearnerRegrBam <- R6::R6Class(
         feature_types = c("logical", "integer", "numeric", "factor"),
         predict_types = c("response"),
         param_set = ps,
-        label = "Fast Generalized Additive Model (BAM) Regression"
+        label = "Fast Generalized Additive Model (BAM) Regression",
+        man = "mlr3bam::mlr_learners_regr.bam"
       )
     }
   ),
@@ -195,55 +189,30 @@ LearnerRegrBam <- R6::R6Class(
     .train = function(task) {
       pars = self$param_set$get_values(tags = "train")
 
-      # Force data to a standard data.frame for mgcv compatibility
-      data = as.data.frame(task$data())
+      data = task$data(cols = c(task$feature_names, task$target_names))
 
-      # Extract spline dimension parameter 'k'.
-      # It is removed from 'pars' as it is injected directly into the formula
-      k_val = pars$k
-      if (is.null(k_val)) k_val = -1
-      pars$k = NULL
-
-      # Dynamic formula construction:
-      # In generalized additive models, continuous features are smoothed
-      # using s() splines, while discrete/categorical features are included
-      # as linear parametric terms.
-      feat_types = task$feature_types
-      num_feats = feat_types$id[feat_types$type %in% c("numeric", "integer")]
-      fct_feats = feat_types$id[feat_types$type %in% c("factor", "logical")]
-
-      if (length(num_feats) > 0) {
-        num_terms = sprintf("s(%s, k=%d)", num_feats, k_val)
-      } else {
-        num_terms = character(0)
-      }
-
-      all_terms = c(num_terms, fct_feats)
-
-      if (length(all_terms) == 0) {
-        # Fallback for featureless tasks (intercept only)
-        form_string = paste(task$target_names, "~ 1")
-      } else {
-        form_string = paste(
-          task$target_names, "~", paste(all_terms, collapse = " + ")
+      if (is.null(pars$formula)) {
+        formula_str = paste(
+          task$target_names,
+          "~",
+          paste(task$feature_names, collapse = " + ")
         )
+        pars$formula = as.formula(formula_str)
       }
 
-      form = as.formula(form_string)
-
-      mlr3misc::invoke(mgcv::bam, formula = form, data = data, .args = pars)
+      mlr3misc::invoke(mgcv::bam, data = data, .args = pars)
     },
 
     .predict = function(task) {
-      # Extract feature data and force standard data.frame format
-      newdata = as.data.frame(task$data(cols = task$feature_names))
+      newdata = mlr3extralearners:::ordered_features(task, self)
 
       response = mlr3misc::invoke(
         predict, self$model, newdata = newdata, type = "response"
       )
 
-      # Return the formatted response for mlr3
       list(response = unname(response))
     }
   )
 )
+
+#.extralrns_dict$add("regr.bam", LearnerRegrBam)
