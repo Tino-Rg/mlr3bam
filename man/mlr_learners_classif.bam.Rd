@@ -21,7 +21,7 @@ superseding columns with col_roles "feature" in the task.
 if (requireNamespace("mgcv", quietly = TRUE)) {
   task = mlr3::tsk("sonar")
 
-  learner = lrn("classif.bam")
+  learner = LearnerClassifBam$new()
 
   learner$param_set$set_values(
     formula = Class ~ s(V1, k = 5) + s(V2, k = 4) + V3,

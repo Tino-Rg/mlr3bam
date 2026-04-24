@@ -21,7 +21,7 @@ superseding columns with col_roles "feature" in the task.
 if (requireNamespace("mgcv", quietly = TRUE)) {
   task = mlr3::tsk("mtcars")
 
-  learner = lrn("regr.bam")
+  learner = LearnerRegrBam$new()
 
   learner$param_set$set_values(
     formula = mpg ~ s(disp, k = 3) + s(hp, k = 4) + cyl,

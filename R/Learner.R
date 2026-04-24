@@ -22,7 +22,7 @@
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("sonar")
 #'
-#'   learner = lrn("classif.bam")
+#'   learner = LearnerClassifBam$new()
 #'
 #'   learner$param_set$set_values(
 #'     formula = Class ~ s(V1, k = 5) + s(V2, k = 4) + V3,
@@ -138,7 +138,7 @@ LearnerClassifBam <- R6::R6Class(
 #' if (requireNamespace("mgcv", quietly = TRUE)) {
 #'   task = mlr3::tsk("mtcars")
 #'
-#'   learner = lrn("regr.bam")
+#'   learner = LearnerRegrBam$new()
 #'
 #'   learner$param_set$set_values(
 #'     formula = mpg ~ s(disp, k = 3) + s(hp, k = 4) + cyl,
