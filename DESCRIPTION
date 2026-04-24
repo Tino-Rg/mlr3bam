@@ -12,6 +12,8 @@ Imports:
     mlr3misc,
     paradox,
     R6
+Remotes: 
+    mlr-outreach/mlr3extralearners
 Suggests: 
     testthat (>= 3.0.0),
     mlr3learners
